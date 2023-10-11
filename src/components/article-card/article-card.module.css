@@ -1,0 +1,56 @@
+.articleCardWrapper{
+    border: 2px solid red;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 30%;
+    min-width: 500px;
+    height: 300px;
+    /* cursor: pointer; */
+    margin-bottom: 25px;
+}
+
+.articleCard{
+    background-color: aquamarine;
+    width: 100%;
+    height: 100%;
+    text-decoration: none;
+    color: black;
+}
+
+.headlineContainer{
+    margin-top: 5px;
+    height: 10%;
+    width: 100%;
+}
+
+.articleHeadline{
+    margin: 0;
+    height: 100%;
+    font-weight: bold;
+    text-align: center;
+    padding: 5px;
+}
+
+.imgContainer{
+    width: 100%;
+    height: 70%;
+}
+
+.img{
+    width: 100%;
+    height: 100%;
+}
+
+.dateContainer{
+    width: 100%;
+    height: 5%;
+    margin-top: 30px;
+}
+
+.articleDate{
+    font-size: smaller;
+    height: 100%;
+    margin: 0;
+    text-align: center;
+}
