@@ -8,7 +8,7 @@ function RecentArticles(props) {
 
   useEffect(() => {
     // Define the endpoint URL
-    const apiUrl = `http://0.0.0.0:7777/${props.mobileNumber}`;
+    const apiUrl = `http://0.0.0.0/api/${props.mobileNumber}`;
 
     // Make an HTTP GET request to the endpoint
     fetch(apiUrl)

@@ -12,7 +12,7 @@ const SpecificArticle = () => {
     async function fetchArticleContent() {
       try {
         const response = await fetch(
-          `http://0.0.0.0:7777/article/${articleLink}/123`
+          `http://0.0.0.0/api/article/${articleLink}/${props.mobileNumber}`
         );
         const articleData = await response.json();
 

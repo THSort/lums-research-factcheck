@@ -87,7 +87,7 @@ const logTrackingData = async (mobileNumber, userStringAgent, requestedUrl) => {
 
 const SPECIFIC_ARTICLES_CACHE_TTL = 24 * 60 * 60 * 1000; // 1 day in milliseconds
 
-app.get('/:mobileNumber', async (req, res) => {
+app.get('/api/:mobileNumber', async (req, res) => {
   try {
     const userAgent = req.get('user-agent');
     const requestedUrl = req.path;
@@ -196,7 +196,7 @@ app.get('/:mobileNumber', async (req, res) => {
 
 const ALL_ARTICLES_CACHE_TTL = 24 * 60 * 60 * 1000; // 1 day in milliseconds
 
-app.get('/all/:mobileNumber', async (req, res) => {
+app.get('/api/all/:mobileNumber', async (req, res) => {
   try {
     const userAgent = req.get('user-agent');
     const requestedUrl = req.path;
@@ -263,7 +263,7 @@ app.get('/all/:mobileNumber', async (req, res) => {
 
 const SPECIFIC_ARTICLE_CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 1 week in milliseconds
 
-app.get('/article/:headline/:mobileNumber', async (req, res) => {
+app.get('/api/article/:headline/:mobileNumber', async (req, res) => {
   try {
     const userAgent = req.get('user-agent');
     const requestedUrl = req.path;
