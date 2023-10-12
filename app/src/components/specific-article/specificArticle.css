@@ -1,0 +1,12 @@
+.articleImage{
+    max-width: 99%;
+    display: block; 
+    margin: 0 auto;
+}
+
+.articleFirstImage{
+    min-width: 100vw;
+    max-width: 100vw;
+    margin-top: -60px;
+    margin-left: -70px;
+}
