@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import styles from "./specific-article.module.css";
 import "./specificArticle.css";
 
-const SpecificArticle = () => {
+const SpecificArticle = (props) => {
   const [articleEnglishHTML, setArticleEnglishHTML] = useState("");
   const [articleUrduHTML, setArticleUrduHTML] = useState("");
 
