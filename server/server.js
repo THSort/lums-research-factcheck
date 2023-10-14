@@ -36,8 +36,30 @@ const translateText = async (text, target) => {
   }
 };
 
-app.use(cors());
+const whitelist = ["http://localhost"]
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || whitelist.indexOf(origin) !== -1) {
+      callback(null, true)
+    } else {
+      callback(new Error("Not allowed by CORS"))
+    }
+  },
+  credentials: true,
+}
+app.use(cors(corsOptions));
 
+app.all('*', function(req, res, next) {
+   res.header("Access-Control-Allow-Origin", "*");
+   res.header("Access-Control-Allow-Headers", "X-Requested-With");
+   next();
+});
+
+app.use(
+    cors({
+        origin: '*',
+    })
+);
 
 const logTrackingData = async (mobileNumber, userStringAgent, requestedUrl) => {
   const timestamp = DateTime.local(); // Get the current timestamp
@@ -197,7 +219,8 @@ app.get('/api/:mobileNumber', async (req, res) => {
 const ALL_ARTICLES_CACHE_TTL = 24 * 60 * 60 * 1000; // 1 day in milliseconds
 
 app.get('/api/all/:mobileNumber', async (req, res) => {
-  try {
+ console.log('ALL!'); 
+ try {
     const userAgent = req.get('user-agent');
     const requestedUrl = req.path;
 

@@ -9,7 +9,10 @@ function AllArticles(props) {
 
   useEffect(() => {
     // Define the endpoint URL
-    const apiUrl = `http://0.0.0.0/api/all/${props.mobileNumber}`;
+    const apiUrl = `/api/all/${props.mobileNumber}`;
+
+    console.log('apiURL:', apiUrl);
+
 
     // Make an HTTP GET request to the endpoint
     fetch(apiUrl)
