@@ -1,11 +1,22 @@
+import { useRef } from "react";
 import styles from "./article-card.module.css";
+import {useOnScreen} from '../useOnScreen/useOnScreen.js'
 
 function ArticleCard(props) {
+
+  const elementRef = useRef(null);
+  const isOnScreen = useOnScreen(elementRef);
+
   return (
     <div className={styles.articleCardWrapper}>
-      <a href={"/specific/" + props.article.Article_Link?.split("/")[3] + '/' + props.mobileNumber} className={styles.articleCard}>
-        <div className={styles.imgContainer}>
+      <a  key={props.id} id={props.id}  href={"/specific/" + props.article.Article_Link?.split("/")[3] + '/' + props.mobileNumber} className={styles.articleCard}>
+        <div ref={elementRef} className={isOnScreen ? styles.imgContainer : styles.hiddenImgContainer}>
           <img className={styles.img} src={props.article.Img_Data_Src} />
+        </div>
+        <div className={styles.headlineContainer}>
+          <p className={styles.articleHeadlineUrdu}>
+            {props.article.Translated_Article_Headline}
+          </p>
         </div>
         <div className={styles.headlineContainer}>
           <p className={styles.articleHeadline}>

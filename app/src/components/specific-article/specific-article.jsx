@@ -12,7 +12,7 @@ const SpecificArticle = (props) => {
     async function fetchArticleContent() {
       try {
         const response = await fetch(
-         `/api/article/${articleLink}/${props.mobileNumber}`
+          `/api/article/${articleLink}/${props.mobileNumber}`
         );
         const articleData = await response.json();
 
@@ -67,7 +67,7 @@ const SpecificArticle = (props) => {
   }, [articleLink]);
 
   return (
-    <div style={{ padding: "30px", fontSize:"30px" }}>
+    <div style={{ padding: "30px", fontSize: "30px" }}>
       <div>
         {/* Render the HTML content received from the backend */}
         <div dangerouslySetInnerHTML={{ __html: articleUrduHTML }} />

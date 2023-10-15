@@ -1,15 +1,9 @@
-import { useEffect } from "react";
 import "./App.css";
 import AllArticles from "./components/all-articles-page/all-articles";
 import RecentArticles from "./components/recent-articles/recent-articles";
 import SpecificArticle from "./components/specific-article/specific-article";
 
 function App() {
-
-  useEffect(()=>{
-    console.log(window.location);
-  },[])
-
   const showAllArticles = () => {
     const mobileNumber = window.location.pathname.split('/')[window.location.pathname.split('/').length - 1];
     

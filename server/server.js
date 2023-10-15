@@ -28,7 +28,7 @@ const translateText = async (text, target) => {
       from: 'en',
       format: 'html'
     });
-    
+
     return translations;
   } catch (err) {
     console.error('Error translating text:', err);
@@ -36,30 +36,8 @@ const translateText = async (text, target) => {
   }
 };
 
-const whitelist = ["http://localhost"]
-const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin || whitelist.indexOf(origin) !== -1) {
-      callback(null, true)
-    } else {
-      callback(new Error("Not allowed by CORS"))
-    }
-  },
-  credentials: true,
-}
-app.use(cors(corsOptions));
+app.use(cors());
 
-app.all('*', function(req, res, next) {
-   res.header("Access-Control-Allow-Origin", "*");
-   res.header("Access-Control-Allow-Headers", "X-Requested-With");
-   next();
-});
-
-app.use(
-    cors({
-        origin: '*',
-    })
-);
 
 const logTrackingData = async (mobileNumber, userStringAgent, requestedUrl) => {
   const timestamp = DateTime.local(); // Get the current timestamp
@@ -68,7 +46,7 @@ const logTrackingData = async (mobileNumber, userStringAgent, requestedUrl) => {
   fs.appendFile('trackingLogs.csv', csvData, (error) => {
     if (error) {
       console.error('Error:', error);
-    } 
+    }
   });
 
   const googleSheetId = '10ZxeplDvfxpGfh5kNgbEEHGdrSYC1kpJ7GWgsiDTmaY';
@@ -103,37 +81,69 @@ const logTrackingData = async (mobileNumber, userStringAgent, requestedUrl) => {
   const googleSheetClient = await _getGoogleSheetClient();
 
   await _writeGoogleSheet(googleSheetClient, googleSheetId, tabName, range, csvData);
-  
+
 };
 
 
-const SPECIFIC_ARTICLES_CACHE_TTL = 24 * 60 * 60 * 1000; // 1 day in milliseconds
+const RECENT_ARTICLES_CACHE_TTL = 24 * 60 * 60 * 1000; // 1 day in milliseconds
 
 app.get('/api/:mobileNumber', async (req, res) => {
   try {
     const userAgent = req.get('user-agent');
     const requestedUrl = req.path;
     const { mobileNumber } = req.params;
+    const { page } = req.query; // Extract the page number from query parameters
+
+    const monthMap = {
+      January: 1,
+      February: 2,
+      March: 3,
+      April: 4,
+      May: 5,
+      June: 6,
+      July: 7,
+      August: 8,
+      September: 9,
+      October: 10,
+      November: 11,
+      December: 12,
+    };
+
+    const today = DateTime.local();
+
+    // Define the items per page
+    const itemsPerPage = 10; // Adjust this as per your requirement
+
+    // Calculate the starting index for the current page
+    const startIndex = (page - 1) * itemsPerPage;
 
     // Generate a unique cache key based on the requested URL
-    const cacheKey = `${requestedUrl}:${mobileNumber}`;
+    const cacheKey = `${requestedUrl}:${mobileNumber}:${page}`;
 
     // Check if cached data for the specific URL exists and is not expired
     if (
       globalCacheForSpecificArticles[cacheKey] &&
-      Date.now() - globalCacheForSpecificArticles[cacheKey].timestamp < SPECIFIC_ARTICLES_CACHE_TTL
+      Date.now() - globalCacheForSpecificArticles[cacheKey].timestamp < RECENT_ARTICLES_CACHE_TTL
     ) {
-      const cachedData = globalCacheForSpecificArticles[cacheKey].data;
-      logTrackingData(mobileNumber, userAgent, requestedUrl);
+      const cachedData = globalCacheForSpecificArticles[cacheKey].data.slice(startIndex, startIndex + itemsPerPage);
+      if(page === "1"){
+        logTrackingData(mobileNumber, userAgent, requestedUrl);
+      }
+      
       res.json(cachedData);
-    } else {
-      logTrackingData(mobileNumber, userAgent, requestedUrl);
+    }
+    else {
+      if(page === "1"){
+        logTrackingData(mobileNumber, userAgent, requestedUrl);
+      }
 
       const url = 'https://www.sochfactcheck.com/category/politics/';
       const response = await axios.get(url);
-      const $ = cheerio.load(response.data);
+      const $ = await cheerio.load(response.data);
 
-      const articles = [];
+      let articles = [];
+      const allArticlesTemp = [];
+      let translationPromises = [];
 
       $('.card').each((index, element) => {
         const $element = $(element);
@@ -144,28 +154,12 @@ app.get('/api/:mobileNumber', async (req, res) => {
 
         const $details = $element.find('.details');
         const articleHeadline = $details.find('h3').text().trim();
+
         const articleDate = $details.find('time').text().trim();
 
         const articleDay = articleDate.split(' ')[0];
         const articleMonth = articleDate.split(' ')[1];
         const articleYear = articleDate.split(' ')[2];
-
-        const today = DateTime.local();
-
-        const monthMap = {
-          January: 1,
-          February: 2,
-          March: 3,
-          April: 4,
-          May: 5,
-          June: 6,
-          July: 7,
-          August: 8,
-          September: 9,
-          October: 10,
-          November: 11,
-          December: 12,
-        };
 
         const articleDatetime = DateTime.fromObject({
           year: parseInt(articleYear),
@@ -173,20 +167,85 @@ app.get('/api/:mobileNumber', async (req, res) => {
           day: parseInt(articleDay),
         });
 
-        const diff = today.diff(articleDatetime, 'days').days;
+        const translationPromise = translateText(articleHeadline, 'ur').then(translatedHeadline => {
+          const diff = today.diff(articleDatetime, 'days').days;
 
-        if (diff <= 7) {
-          articles.push({
+          const articleObject = {
             Response: 200,
             Article_Link: articleLink,
             Img_Data_Src: imgDataSrc,
             Img_src: imgSrc,
             Article_Headline: articleHeadline,
+            Translated_Article_Headline: translatedHeadline,
             Article_Date: articleDate,
-          });
-        }
+          };
+
+          if (diff <= 1) {
+            articles.push(articleObject);
+          }
+
+          allArticlesTemp.push(articleObject);
+        });
+
+        translationPromises.push(translationPromise);
       });
 
+      // Wait for all translation promises to be resolved
+      await Promise.all(translationPromises);
+
+      if (articles.length === 0) {
+        const filteredArticles = allArticlesTemp.filter(articleObject => {
+          const articleDate = articleObject.Article_Date;
+          const articleDay = articleDate.split(' ')[0];
+          const articleMonth = articleDate.split(' ')[1];
+          const articleYear = articleDate.split(' ')[2];
+      
+          const articleDatetime = DateTime.fromObject({
+            year: parseInt(articleYear),
+            month: monthMap[articleMonth],
+            day: parseInt(articleDay),
+          });
+      
+          const diff = today.diff(articleDatetime, 'days').days;
+      
+          return diff <= 30;
+        });
+      
+        // Sort the filtered articles in descending order of Article_Date
+        filteredArticles.sort((a, b) => {
+          const dateA = DateTime.fromFormat(a.Article_Date, 'dd MMMM yyyy');
+          const dateB = DateTime.fromFormat(b.Article_Date, 'dd MMMM yyyy');
+          return dateB.diff(dateA).as('milliseconds');
+        });
+      
+        filteredArticles.forEach(articleObject => {
+          const translationPromise = translateText(articleObject.Article_Headline, 'ur').then(translatedHeadline => {
+            const extendedArticleObject = {
+              Response: 200,
+              Article_Link: articleObject.Article_Link,
+              Img_Data_Src: articleObject.Img_Data_Src,
+              Img_src: articleObject.Img_src,
+              Article_Headline: articleObject.Article_Headline,
+              Translated_Article_Headline: translatedHeadline,
+              Article_Date: articleObject.Article_Date,
+            };
+            articles.push(extendedArticleObject);
+          });
+          translationPromises.push(translationPromise);
+        });
+      
+        // Wait for the translation promises for the filtered articles to be resolved
+        await Promise.all(translationPromises);
+
+        // Sort the articles array in descending order based on Article_Date
+        articles.sort((a, b) => new Date(b.Article_Date) - new Date(a.Article_Date));
+      
+        // If the articles array is still empty, use the filtered articles directly
+        if (articles.length === 0) {
+          articles = filteredArticles;
+        }
+      }
+      
       // Create a cache entry for the specific URL
       const cacheEntry = {
         data: articles,
@@ -201,13 +260,15 @@ app.get('/api/:mobileNumber', async (req, res) => {
       for (const key in globalCacheForSpecificArticles) {
         if (
           globalCacheForSpecificArticles[key].timestamp &&
-          currentTimestamp - globalCacheForSpecificArticles[key].timestamp >= SPECIFIC_ARTICLES_CACHE_TTL
+          currentTimestamp - globalCacheForSpecificArticles[key].timestamp >= RECENT_ARTICLES_CACHE_TTL
         ) {
           delete globalCacheForSpecificArticles[key];
         }
       }
 
-      res.json(articles);
+      // Return the subset of articles for the current page
+      const articlesSubset = articles.slice(startIndex, startIndex + itemsPerPage);
+      res.json(articlesSubset);
     }
   } catch (error) {
     console.error(error);
@@ -219,29 +280,40 @@ app.get('/api/:mobileNumber', async (req, res) => {
 const ALL_ARTICLES_CACHE_TTL = 24 * 60 * 60 * 1000; // 1 day in milliseconds
 
 app.get('/api/all/:mobileNumber', async (req, res) => {
- console.log('ALL!'); 
- try {
+  try {
     const userAgent = req.get('user-agent');
     const requestedUrl = req.path;
 
     const { mobileNumber } = req.params;
+    const { page } = req.query; // Extract the page number from query parameters
+
+    // Define the items per page
+    const itemsPerPage = 10; // Adjust this as per your requirement
+
+    // Calculate the starting index for the current page
+    const startIndex = (page - 1) * itemsPerPage;
 
     // Check if cached data for 'all' exists and is not expired
     if (
       globalCacheForAllArticles.data &&
       Date.now() - globalCacheForAllArticles.timestamp < ALL_ARTICLES_CACHE_TTL
     ) {
-      const cachedData = globalCacheForAllArticles.data;
-      logTrackingData(mobileNumber, userAgent, requestedUrl);
+      const cachedData = globalCacheForAllArticles.data.slice(startIndex, startIndex + itemsPerPage);
+      if (page === "1") {
+        logTrackingData(mobileNumber, userAgent, requestedUrl);
+      }
       res.json(cachedData);
     } else {
-      logTrackingData(mobileNumber, userAgent, requestedUrl);
+      if (page === "1") {
+        logTrackingData(mobileNumber, userAgent, requestedUrl);
+      }
 
       const url = 'https://www.sochfactcheck.com/category/politics/';
       const response = await axios.get(url);
       const $ = cheerio.load(response.data);
 
-      const articles = [];
+      let articles = [];
+      let translationPromises = [];
 
       $('.card').each((index, element) => {
         const $element = $(element);
@@ -254,15 +326,26 @@ app.get('/api/all/:mobileNumber', async (req, res) => {
         const articleHeadline = $details.find('h3').text().trim();
         const articleDate = $details.find('time').text().trim();
 
-        articles.push({
-          Response: 200,
-          Article_Link: articleLink,
-          Img_Data_Src: imgDataSrc,
-          Img_src: imgSrc,
-          Article_Headline: articleHeadline,
-          Article_Date: articleDate,
+        const translationPromise = translateText(articleHeadline, 'ur').then(translatedHeadline => {
+          articles.push({
+            Response: 200,
+            Article_Link: articleLink,
+            Img_Data_Src: imgDataSrc,
+            Img_src: imgSrc,
+            Article_Headline: articleHeadline,
+            Translated_Article_Headline: translatedHeadline,
+            Article_Date: articleDate,
+          });
         });
+
+        translationPromises.push(translationPromise);
       });
+
+      // Wait for all translation promises to be resolved
+      await Promise.all(translationPromises);
+
+      // Sort the articles array in descending order based on Article_Date
+      articles.sort((a, b) => new Date(b.Article_Date) - new Date(a.Article_Date));
 
       // Update the global cache for 'all' articles
       globalCacheForAllArticles.data = articles;
@@ -270,18 +353,21 @@ app.get('/api/all/:mobileNumber', async (req, res) => {
 
       // Check and remove cache entries that have exceeded their TTL
       const currentTimestamp = Date.now();
-      if (globalCacheForAllArticles.timestamp &&
-        currentTimestamp - globalCacheForAllArticles.timestamp >= ALL_ARTICLES_CACHE_TTL) {
+      if (globalCacheForAllArticles.timestamp && currentTimestamp - globalCacheForAllArticles.timestamp >= ALL_ARTICLES_CACHE_TTL) {
         globalCacheForAllArticles = {};
       }
 
-      res.json(articles);
+      // Return the subset of articles for the current page
+      const articlesSubset = articles.slice(startIndex, startIndex + itemsPerPage);
+      res.json(articlesSubset);
     }
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
+
+
 
 
 const SPECIFIC_ARTICLE_CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 1 week in milliseconds
