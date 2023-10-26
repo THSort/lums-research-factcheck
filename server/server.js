@@ -80,7 +80,11 @@ const logTrackingData = async (mobileNumber, userStringAgent, requestedUrl) => {
 
   const googleSheetClient = await _getGoogleSheetClient();
 
-  await _writeGoogleSheet(googleSheetClient, googleSheetId, tabName, range, csvData);
+  try {
+    await _writeGoogleSheet(googleSheetClient, googleSheetId, tabName, range, csvData);
+  } catch (e) {
+    console.log(e);
+  }
 
 };
 
@@ -126,14 +130,14 @@ app.get('/api/:mobileNumber', async (req, res) => {
       Date.now() - globalCacheForSpecificArticles[cacheKey].timestamp < RECENT_ARTICLES_CACHE_TTL
     ) {
       const cachedData = globalCacheForSpecificArticles[cacheKey].data.slice(startIndex, startIndex + itemsPerPage);
-      if(page === "1"){
+      if (page === "1") {
         logTrackingData(mobileNumber, userAgent, requestedUrl);
       }
-      
+
       res.json(cachedData);
     }
     else {
-      if(page === "1"){
+      if (page === "1") {
         logTrackingData(mobileNumber, userAgent, requestedUrl);
       }
 
@@ -199,25 +203,25 @@ app.get('/api/:mobileNumber', async (req, res) => {
           const articleDay = articleDate.split(' ')[0];
           const articleMonth = articleDate.split(' ')[1];
           const articleYear = articleDate.split(' ')[2];
-      
+
           const articleDatetime = DateTime.fromObject({
             year: parseInt(articleYear),
             month: monthMap[articleMonth],
             day: parseInt(articleDay),
           });
-      
+
           const diff = today.diff(articleDatetime, 'days').days;
-      
+
           return diff <= 30;
         });
-      
+
         // Sort the filtered articles in descending order of Article_Date
         filteredArticles.sort((a, b) => {
           const dateA = DateTime.fromFormat(a.Article_Date, 'dd MMMM yyyy');
           const dateB = DateTime.fromFormat(b.Article_Date, 'dd MMMM yyyy');
           return dateB.diff(dateA).as('milliseconds');
         });
-      
+
         filteredArticles.forEach(articleObject => {
           const translationPromise = translateText(articleObject.Article_Headline, 'ur').then(translatedHeadline => {
             const extendedArticleObject = {
@@ -233,19 +237,19 @@ app.get('/api/:mobileNumber', async (req, res) => {
           });
           translationPromises.push(translationPromise);
         });
-      
+
         // Wait for the translation promises for the filtered articles to be resolved
         await Promise.all(translationPromises);
 
         // Sort the articles array in descending order based on Article_Date
         articles.sort((a, b) => new Date(b.Article_Date) - new Date(a.Article_Date));
-      
+
         // If the articles array is still empty, use the filtered articles directly
         if (articles.length === 0) {
           articles = filteredArticles;
         }
       }
-      
+
       // Create a cache entry for the specific URL
       const cacheEntry = {
         data: articles,
