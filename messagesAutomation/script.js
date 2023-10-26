@@ -23,23 +23,27 @@ async function _readGoogleSheet(googleSheetClient, sheetId, tabName, range) {
         });
 
         const rows = response.data.values;
+        let counter = 0;
         if (rows.length) {
             rows.forEach(row => {
-                if (row.length > 0) {
-                    console.log('Sending message to:', row[1]);
-                    const command = `sudo npx mudslide send ${row[1]} 'Here are this week\'s fact checked articles: http://50.19.182.29/home/${row[1]}'`;
-                    exec(command, (error, stdout, stderr) => {
-                        if (error) {
-                            console.error(`Error executing command: ${error}`);
-                            return;
-                        }
-                        if (stderr) {
-                            console.error(`stderr: ${stderr}`);
-                            return;
-                        }
-                        console.log(`stdout: ${stdout}`);
-                    });
+                if (counter !== 0) {
+                    if (row.length > 0) {
+                        console.log('Sending message to:', row[1]);
+                        const command = `sudo npx mudslide send ${row[1]} 'Here are this weeks fact checked articles: http://50.19.182.29/home/${row[1]}'`;
+                        exec(command, (error, stdout, stderr) => {
+                            if (error) {
+                                console.error(`Error executing command: ${error}`);
+                                return;
+                            }
+                            if (stderr) {
+                                console.error(`stderr: ${stderr}`);
+                                return;
+                            }
+                            console.log(`stdout: ${stdout}`);
+                        });
+                    }
                 }
+                counter = counter + 1;
             });
         } else {
             console.log('No data found.');
@@ -49,7 +53,7 @@ async function _readGoogleSheet(googleSheetClient, sheetId, tabName, range) {
     }
 }
 
-async function sendMessages(){
+async function sendMessages() {
     const googleSheetClient = await _getGoogleSheetClient();
     _readGoogleSheet(googleSheetClient, '1gOfRk5BTon1VIxf1GaJc9G7ZZ6D0BpqCROxnQtVbS_I', 'Sheet1', 'A:B');
 }
