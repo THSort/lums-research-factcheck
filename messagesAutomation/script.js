@@ -25,26 +25,22 @@ async function _readGoogleSheet(googleSheetClient, sheetId, tabName, range) {
         const rows = response.data.values;
         let counter = 0;
         if (rows.length) {
+            const commands = [];
             rows.forEach(row => {
                 if (counter !== 0) {
                     if (row.length > 0) {
                         console.log('Sending message to:', row[1]);
-                        const command = `sudo npx mudslide send ${row[1]} 'Here are this weeks fact checked articles: http://50.19.182.29/home/${row[1]}'`;
-                        exec(command, (error, stdout, stderr) => {
-                            if (error) {
-                                console.error(`Error executing command: ${error}`);
-                                return;
-                            }
-                            if (stderr) {
-                                console.error(`stderr: ${stderr}`);
-                                return;
-                            }
-                            console.log(`stdout: ${stdout}`);
-                        });
+                        const command = `sudo npx mudslide send ${row[1]} 'Here are this week\'s fact checked articles: http://50.19.182.29/home/${row[1]}'`;
+                        commands.push(command);
                     }
                 }
                 counter = counter + 1;
             });
+
+            // Write commands to a text file
+            fs.writeFileSync('commands.txt', commands.join('\n'));
+
+            console.log('Commands have been written to commands.txt file.');
         } else {
             console.log('No data found.');
         }
